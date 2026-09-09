@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: py-app
+  labels:
+    app: py-app
+spec:
+  containers:
+  - image: kodafoo/py-app
+    name: py-app
+    ports:
+      - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: py-app
+spec:
+  selector:
+    app: py-app
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: LoadBalancer
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: py-app-route
+  namespace: dakota-tf
+spec:
+  parentRefs:
+  - name: cilium-gateway
+    namespace: cilium
+  hostnames:
+  - py-app.dakotabuilds.com
+  rules:
+  - matches:
+    - path:
+        value: "/"
+    backendRefs:
+      - name: py-app
+        namespace: dakota-tf
+        port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ReferenceGrant
+metadata:
+  name: dakota-tf
+  namespace: dakota-tf
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: dakota-tf
+  to:
+  - group: ""
+    kind: Service
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  containers:
+  - image: nginx:latest
+    name: nginx
+    ports:
+      - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  selector:
+    app: nginx
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer
